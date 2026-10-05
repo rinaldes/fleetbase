@@ -31,7 +31,7 @@ services:
     command: ["mysqld", "--skip-log-bin"]
     volumes:
       - "./docker/database/:/docker-entrypoint-initdb.d/"
-      - "./docker/database/mysql:/var/lib/mysql"
+      - "mysql-data:/var/lib/mysql"
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
       MYSQL_DATABASE: "fleetbase"
@@ -94,7 +94,7 @@ services:
     restart: unless-stopped
     image: fleetbase/fleetbase-api:latest
     volumes:
-      - ./api/storage/app:/fleetbase/api/storage/app
+      - "api-storage:/fleetbase/api/storage/app"
     environment:
       <<: *api-env
       ENVIRONMENT: development
@@ -120,3 +120,8 @@ services:
       - "39904:80"
     depends_on:
       - application
+
+volumes:
+  mysql-data:
+  api-storage:
+
