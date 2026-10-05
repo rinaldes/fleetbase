@@ -1,3 +1,17 @@
+# Shared by every service that runs the Laravel API image (application, queue,
+# scheduler). Values come from the Dokploy Environment tab (.env at deploy time).
+x-api-env: &api-env
+  APP_KEY: ${APP_KEY:?APP_KEY is not set - add it in the Dokploy Environment tab}
+  APP_URL: ${APP_URL:-http://localhost:39904}
+  CONSOLE_HOST: ${CONSOLE_HOST:-http://localhost:39903}
+  FRONTEND_HOSTS: ${FRONTEND_HOSTS:-http://localhost:39903}
+  DATABASE_URL: "mysql://root@database/fleetbase"
+  QUEUE_CONNECTION: redis
+  CACHE_DRIVER: redis
+  CACHE_PATH: /fleetbase/api/storage/framework/cache
+  CACHE_URL: tcp://cache
+  REDIS_URL: tcp://cache
+
 services:
   cache:
     image: redis:4-alpine
@@ -36,21 +50,15 @@ services:
     environment:
       SOCKETCLUSTER_WORKERS: 10
       SOCKETCLUSTER_BROKERS: 10
-      # SOCKETCLUSTER_OPTIONS can be set via docker-compose.override.yml for specific environments
-      # For production, use: SOCKETCLUSTER_OPTIONS: '{"origins":"https://yourdomain.com:*"}'
-      # For development, use: SOCKETCLUSTER_OPTIONS: '{"origins":"http://localhost:*"}'
+      # For production, set SOCKETCLUSTER_ORIGINS to e.g. https://yourdomain.com:*
+      SOCKETCLUSTER_OPTIONS: '{"origins":"${SOCKETCLUSTER_ORIGINS:-http://localhost:*}"}'
 
   scheduler:
     image: fleetbase/fleetbase-api:latest
     command: ["go-crond", "--verbose", "root:./crontab"]
     restart: unless-stopped
     environment:
-      DATABASE_URL: "mysql://root@database/fleetbase"
-      QUEUE_CONNECTION: redis
-      CACHE_DRIVER: redis
-      CACHE_PATH: /fleetbase/api/storage/framework/cache
-      CACHE_URL: tcp://cache
-      REDIS_URL: tcp://cache
+      <<: *api-env
     depends_on:
       - database
       - cache
@@ -65,12 +73,7 @@ services:
       timeout: 10s
       retries: 3
     environment:
-      DATABASE_URL: "mysql://root@database/fleetbase"
-      QUEUE_CONNECTION: redis
-      CACHE_DRIVER: redis
-      CACHE_PATH: /fleetbase/api/storage/framework/cache
-      CACHE_URL: tcp://cache
-      REDIS_URL: tcp://cache
+      <<: *api-env
     depends_on:
       - database
       - cache
@@ -91,16 +94,10 @@ services:
     restart: unless-stopped
     image: fleetbase/fleetbase-api:latest
     volumes:
-      - ./api/.env:/fleetbase/api/.env
       - ./api/storage/app:/fleetbase/api/storage/app
     environment:
+      <<: *api-env
       ENVIRONMENT: development
-      DATABASE_URL: "mysql://root@database/fleetbase"
-      QUEUE_CONNECTION: redis
-      CACHE_DRIVER: redis
-      CACHE_PATH: /fleetbase/api/storage/framework/cache
-      CACHE_URL: tcp://cache
-      REDIS_URL: tcp://cache
       SESSION_DOMAIN: localhost
       BROADCAST_DRIVER: socketcluster
       MAIL_FROM_NAME: Fleetbase
